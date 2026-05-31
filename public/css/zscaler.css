@@ -1,0 +1,567 @@
+/*
+ * Plugin Zscaler - identidade visual (azul-marca + ciano Zscaler).
+ * Carregado globalmente via hook add_css. Todas as regras sao prefixadas
+ * com .zscaler-* ou .zs-* para nao vazar para outras telas do GLPI.
+ */
+
+:root {
+   --zs-blue: #0648A8;
+   --zs-blue-700: #06367e;
+   --zs-dark: #0A1E3F;
+   --zs-cyan: #00B2E3;
+   --zs-cyan-600: #0095c4;
+   --zs-grad: linear-gradient(125deg, #0A1E3F 0%, #0648A8 55%, #00B2E3 100%);
+   --zs-grad-btn: linear-gradient(120deg, #0648A8 0%, #00B2E3 100%);
+   --zs-border: var(--tblr-border-color, #d9e2f2);
+   --zs-surface: var(--tblr-bg-surface, #fff);
+   --zs-muted: var(--tblr-secondary-color, #6b7280);
+   --zs-ink: var(--tblr-body-color, #1c2330);
+}
+
+/* ---------- Wrappers ---------- */
+.zscaler-config,
+.zscaler-dashboard {
+   max-width: 1280px;
+   margin: 0 auto;
+}
+
+/* ---------- Marca / logo ---------- */
+.zs-logo {
+   display: inline-flex;
+   align-items: center;
+   justify-content: center;
+   flex: 0 0 auto;
+   width: 46px;
+   height: 46px;
+   border-radius: 13px;
+   background: rgba(255, 255, 255, .14);
+   border: 1px solid rgba(255, 255, 255, .28);
+   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25);
+   color: #fff;
+   font-size: 1.5rem;
+   backdrop-filter: blur(4px);
+}
+
+.zs-logo--solid {
+   background: var(--zs-grad-btn);
+   border: 0;
+   color: #fff;
+   box-shadow: 0 6px 16px rgba(6, 72, 168, .35);
+}
+
+.zs-hero__brand {
+   display: flex;
+   align-items: center;
+   gap: .9rem;
+   min-width: 0;
+}
+
+/* ---------- Hero ---------- */
+.zscaler-config__hero,
+.zscaler-dashboard__hero {
+   position: relative;
+   overflow: hidden;
+   display: flex;
+   align-items: center;
+   justify-content: space-between;
+   gap: 1rem;
+   padding: 1.4rem 1.5rem;
+   margin-bottom: 1rem;
+   border: 0;
+   border-radius: 16px;
+   background: var(--zs-grad);
+   color: #fff;
+   box-shadow: 0 18px 40px rgba(10, 30, 63, .30);
+}
+
+.zscaler-config__hero::after,
+.zscaler-dashboard__hero::after {
+   content: "";
+   position: absolute;
+   top: -60%;
+   right: -10%;
+   width: 380px;
+   height: 380px;
+   background: radial-gradient(circle, rgba(0, 178, 227, .25), transparent 62%);
+   pointer-events: none;
+}
+
+.zscaler-config__hero h2,
+.zscaler-dashboard__hero h2 {
+   margin: 0;
+   font-size: 1.5rem;
+   font-weight: 800;
+   letter-spacing: -.01em;
+   color: #fff;
+}
+
+.zscaler-config__hero p,
+.zscaler-dashboard__hero p {
+   margin: .2rem 0 0;
+   color: rgba(255, 255, 255, .85);
+}
+
+.zscaler-config__eyebrow,
+.zscaler-dashboard__eyebrow {
+   display: inline-block;
+   margin-bottom: .15rem;
+   color: rgba(255, 255, 255, .9);
+   font-size: .72rem;
+   font-weight: 800;
+   letter-spacing: .10em;
+   text-transform: uppercase;
+}
+
+.zscaler-hero__actions {
+   position: relative;
+   z-index: 1;
+   display: flex;
+   gap: .5rem;
+   flex-wrap: wrap;
+}
+
+.zscaler-config__status {
+   position: relative;
+   z-index: 1;
+   display: inline-flex;
+   align-items: center;
+   gap: .4rem;
+   padding: .4rem .8rem;
+   border-radius: 999px;
+   font-weight: 700;
+   font-size: .85rem;
+   background: rgba(255, 255, 255, .16);
+   border: 1px solid rgba(255, 255, 255, .3);
+   color: #fff;
+}
+
+.zscaler-config__status.is-ok {
+   background: rgba(0, 178, 227, .25);
+}
+
+.zscaler-config__status.is-warn {
+   background: rgba(255, 193, 7, .25);
+}
+
+/* ---------- Grid de paineis ---------- */
+.zscaler-config__grid {
+   display: grid;
+   grid-template-columns: repeat(2, minmax(0, 1fr));
+   gap: 1rem;
+}
+
+.zscaler-grid-2 {
+   display: grid;
+   grid-template-columns: repeat(2, minmax(0, 1fr));
+   gap: 1rem;
+   margin-top: 1rem;
+}
+
+@media (max-width: 960px) {
+   .zscaler-config__grid,
+   .zscaler-grid-2 {
+      grid-template-columns: 1fr;
+   }
+}
+
+.zscaler-panel {
+   border: 1px solid var(--zs-border);
+   border-radius: 14px;
+   background: var(--zs-surface);
+   overflow: hidden;
+}
+
+.zscaler-panel--wide {
+   grid-column: 1 / -1;
+}
+
+.zscaler-panel__head {
+   display: flex;
+   align-items: center;
+   justify-content: space-between;
+   gap: 1rem;
+   padding: 1rem 1.2rem;
+   border-bottom: 1px solid var(--zs-border);
+   background: linear-gradient(180deg, rgba(6, 72, 168, .05), transparent);
+}
+
+.zscaler-panel__title {
+   display: flex;
+   align-items: center;
+   gap: .7rem;
+}
+
+.zscaler-panel__icon {
+   display: inline-flex;
+   align-items: center;
+   justify-content: center;
+   width: 38px;
+   height: 38px;
+   border-radius: 10px;
+   background: var(--zs-grad-btn);
+   color: #fff;
+   font-size: 1.15rem;
+}
+
+.zscaler-panel__head h3 {
+   margin: 0;
+   font-size: 1.05rem;
+   font-weight: 700;
+   color: var(--zs-dark);
+}
+
+.zscaler-panel__head p {
+   margin: .1rem 0 0;
+   font-size: .82rem;
+   color: var(--zs-muted);
+}
+
+.zscaler-panel__body {
+   padding: 1.2rem;
+}
+
+/* ---------- Campos ---------- */
+.zscaler-fields {
+   display: grid;
+   grid-template-columns: repeat(2, minmax(0, 1fr));
+   gap: 1rem;
+}
+
+@media (max-width: 720px) {
+   .zscaler-fields {
+      grid-template-columns: 1fr;
+   }
+}
+
+.zscaler-field {
+   display: flex;
+   flex-direction: column;
+   gap: .35rem;
+   margin: 0;
+}
+
+.zscaler-field--wide {
+   grid-column: 1 / -1;
+}
+
+.zscaler-field > span {
+   font-weight: 600;
+   font-size: .85rem;
+   color: var(--zs-dark);
+}
+
+.zscaler-field small {
+   color: var(--zs-muted);
+   font-size: .78rem;
+}
+
+.zscaler-field--hidden,
+.zscaler-test-result--hidden {
+   display: none !important;
+}
+
+.zscaler-auth {
+   grid-column: 1 / -1;
+   display: grid;
+   grid-template-columns: repeat(2, minmax(0, 1fr));
+   gap: 1rem;
+   padding: 1rem;
+   border: 1px dashed var(--zs-border);
+   border-radius: 12px;
+   background: rgba(0, 178, 227, .04);
+}
+
+@media (max-width: 720px) {
+   .zscaler-auth {
+      grid-template-columns: 1fr;
+   }
+}
+
+/* ---------- Acoes / botoes ---------- */
+.zscaler-config__actions,
+.zscaler-toolbar {
+   display: flex;
+   gap: .6rem;
+   flex-wrap: wrap;
+   margin-top: 1rem;
+}
+
+.zscaler-config .btn-primary,
+.zscaler-dashboard .btn-primary {
+   background: var(--zs-grad-btn);
+   border: 0;
+}
+
+/* ---------- Banner ---------- */
+.zscaler-banner {
+   display: flex;
+   align-items: flex-start;
+   gap: .6rem;
+   padding: .85rem 1rem;
+   border-radius: 12px;
+   margin-bottom: 1rem;
+   font-size: .9rem;
+   border: 1px solid var(--zs-border);
+}
+
+.zscaler-banner .ti {
+   font-size: 1.2rem;
+   line-height: 1.3;
+}
+
+.zscaler-banner--warn {
+   background: #fff8e6;
+   border-color: #ffe08a;
+   color: #8a6d3b;
+}
+
+.zscaler-banner--info {
+   background: #eaf6fb;
+   border-color: #b8e3f2;
+   color: #0b5d77;
+}
+
+.zscaler-banner--ok {
+   background: #e8f6ee;
+   border-color: #aedcc1;
+   color: #1c6b3f;
+}
+
+.zscaler-banner--error {
+   background: #fdecec;
+   border-color: #f5b5b5;
+   color: #9b1c1c;
+}
+
+/* ---------- Cards de KPI ---------- */
+.zscaler-cards {
+   display: grid;
+   grid-template-columns: repeat(5, minmax(0, 1fr));
+   gap: .8rem;
+   margin-top: 1rem;
+}
+
+@media (max-width: 1100px) {
+   .zscaler-cards {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+   }
+}
+
+.zscaler-card {
+   display: flex;
+   flex-direction: column;
+   gap: .2rem;
+   padding: 1rem;
+   border-radius: 14px;
+   border: 1px solid var(--zs-border);
+   background: var(--zs-surface);
+   text-decoration: none;
+   color: var(--zs-ink);
+   transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+}
+
+.zscaler-card:hover {
+   transform: translateY(-2px);
+   box-shadow: 0 12px 24px rgba(6, 72, 168, .14);
+   border-color: var(--zs-cyan);
+   color: var(--zs-ink);
+}
+
+.zscaler-card__icon {
+   font-size: 1.4rem;
+   color: var(--zs-blue);
+}
+
+.zscaler-card__value {
+   font-size: 1.9rem;
+   font-weight: 800;
+   line-height: 1.1;
+   color: var(--zs-dark);
+}
+
+.zscaler-card__label {
+   font-size: .82rem;
+   color: var(--zs-muted);
+}
+
+/* ---------- Badges / status ---------- */
+.zs-badge {
+   display: inline-block;
+   padding: .15rem .55rem;
+   border-radius: 999px;
+   font-size: .75rem;
+   font-weight: 700;
+}
+
+.zs-badge--ok {
+   background: rgba(0, 178, 227, .15);
+   color: var(--zs-blue-700);
+}
+
+.zs-badge--error {
+   background: #fdecec;
+   color: #9b1c1c;
+}
+
+.zscaler-break {
+   word-break: break-all;
+}
+
+.zscaler-footnote {
+   margin-top: 1rem;
+   padding: .7rem 1rem;
+   border-radius: 10px;
+   background: rgba(6, 72, 168, .05);
+   color: var(--zs-muted);
+   font-size: .82rem;
+}
+
+/* ---------- Resultado do teste de conexao ---------- */
+.zscaler-test-result {
+   display: flex;
+   flex-direction: column;
+   gap: .15rem;
+   padding: .8rem 1rem;
+   border-radius: 12px;
+   margin-bottom: 1rem;
+   border: 1px solid var(--zs-border);
+}
+
+.zscaler-test-result--loading {
+   background: #eaf6fb;
+   border-color: #b8e3f2;
+   color: #0b5d77;
+}
+
+.zscaler-test-result--ok {
+   background: #e8f6ee;
+   border-color: #aedcc1;
+   color: #1c6b3f;
+}
+
+.zscaler-test-result--error {
+   background: #fdecec;
+   border-color: #f5b5b5;
+   color: #9b1c1c;
+}
+
+/* ---------- Aba em ticket/computador ---------- */
+.zscaler-itemaction {
+   max-width: 760px;
+}
+
+.zscaler-itemaction__head {
+   display: flex;
+   align-items: center;
+   gap: .8rem;
+   margin-bottom: 1rem;
+}
+
+.zscaler-itemaction__head h3 {
+   margin: 0;
+   color: var(--zs-dark);
+   font-size: 1.1rem;
+}
+
+.zscaler-itemaction__head p {
+   margin: .1rem 0 0;
+   color: var(--zs-muted);
+   font-size: .85rem;
+}
+
+/* ---------- Permissoes (tab perfil) ---------- */
+.zscaler-rights {
+   max-width: 880px;
+}
+
+.zscaler-rights__head {
+   display: flex;
+   align-items: center;
+   gap: .9rem;
+   margin-bottom: 1rem;
+}
+
+.zscaler-rights__head h3 {
+   margin: 0;
+   color: var(--zs-dark);
+}
+
+.zscaler-rights__head p {
+   margin: .1rem 0 0;
+   color: var(--zs-muted);
+   font-size: .85rem;
+}
+
+.zscaler-rights__list {
+   display: flex;
+   flex-direction: column;
+   gap: .6rem;
+}
+
+.zscaler-right {
+   display: flex;
+   align-items: center;
+   justify-content: space-between;
+   gap: 1rem;
+   padding: .8rem 1rem;
+   border: 1px solid var(--zs-border);
+   border-radius: 12px;
+   background: var(--zs-surface);
+}
+
+.zscaler-right__info {
+   display: flex;
+   align-items: center;
+   gap: .7rem;
+}
+
+.zscaler-right__icon {
+   display: inline-flex;
+   align-items: center;
+   justify-content: center;
+   width: 36px;
+   height: 36px;
+   border-radius: 10px;
+   background: rgba(6, 72, 168, .1);
+   color: var(--zs-blue);
+   font-size: 1.1rem;
+}
+
+.zscaler-right__text strong {
+   display: block;
+   color: var(--zs-dark);
+}
+
+.zscaler-right__text code {
+   font-size: .75rem;
+   color: var(--zs-muted);
+}
+
+.zscaler-right__perms {
+   display: flex;
+   gap: .8rem;
+   flex-wrap: wrap;
+}
+
+.zs-switch {
+   display: inline-flex;
+   align-items: center;
+   gap: .35rem;
+   font-size: .82rem;
+   color: var(--zs-ink);
+   cursor: pointer;
+}
+
+.zs-switch--na {
+   color: var(--zs-muted);
+   opacity: .7;
+}
+
+.zs-switch.is-disabled {
+   opacity: .6;
+   cursor: not-allowed;
+}
+
+.zscaler-rights__footer {
+   margin-top: 1rem;
+}

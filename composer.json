@@ -1,0 +1,14 @@
+{
+  "name": "internal/glpi-zscaler",
+  "description": "GLPI plugin to integrate Zscaler ZIA, ZCC and ZDX with dashboards, controlled actions and ticket automation.",
+  "type": "glpi-plugin",
+  "license": "GPL-3.0-or-later",
+  "autoload": {
+    "psr-4": {
+      "GlpiPlugin\\Zscaler\\": "src/"
+    }
+  },
+  "require": {
+    "php": ">=8.2"
+  }
+}

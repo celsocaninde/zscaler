@@ -77,12 +77,55 @@ class ItemAction extends \CommonGLPI
       echo "</div>";
       \Html::closeForm();
 
+      // Self-service: pedir bloqueio com aprovacao (apenas em Tickets).
+      if ($item instanceof \Ticket
+         && (string)($config['selfservice_enabled'] ?? '0') === '1'
+         && Config::isConfigured($config)) {
+         self::renderSelfServiceForm($root, $ticketId, $h);
+      }
+
       // Acoes recentes vinculadas a este item
       self::renderRecentForItem($itemtype, $itemsId, $h);
 
       echo "</div>";
 
       return true;
+   }
+
+   /**
+    * Formulario self-service: pedir bloqueio de URL que so executa apos aprovacao.
+    */
+   private static function renderSelfServiceForm(string $root, int $ticketId, callable $h): void
+   {
+      echo "<div class='zscaler-posture'>";
+      echo "<div class='zscaler-posture__head'><span class='ti ti-gavel'></span><h4>Bloqueio com aprovacao</h4></div>";
+      echo "<p class='text-muted' style='margin:.2rem 0 .8rem'>Solicite o bloqueio de uma URL. Ele so sera aplicado na console apos a aprovacao desta solicitacao no ticket.</p>";
+
+      echo "<form method='post' action='" . $h($root . '/plugins/zscaler/front/action.form.php') . "'>";
+      echo \Html::hidden('source_tickets_id', ['value' => $ticketId]);
+      echo "<div class='zscaler-fields'>";
+      echo "<label class='zscaler-field zscaler-field--wide'>";
+      echo "<span>URL / dominio a bloquear</span>";
+      echo "<input class='form-control' type='text' name='urls' placeholder='ex.: malicioso.com'>";
+      echo "</label>";
+      echo "<label class='zscaler-field'>";
+      echo "<span>Aprovador</span>";
+      \User::dropdown([
+         'name'                => 'approver_id',
+         'right'               => 'validate_incident',
+         'entity'              => $_SESSION['glpiactiveentities'] ?? -1,
+         'width'               => '100%',
+         'comments'            => false,
+         'display_emptychoice' => true,
+         'emptylabel'          => 'Selecione um aprovador',
+      ]);
+      echo "</label>";
+      echo "</div>";
+      echo "<div class='zscaler-toolbar'>";
+      echo "<button class='btn btn-warning' type='submit' name='do' value='request_block' onclick=\"return confirm('Enviar pedido de bloqueio para aprovacao?');\"><span class='ti ti-gavel'></span> Solicitar bloqueio (com aprovacao)</button>";
+      echo "</div>";
+      \Html::closeForm();
+      echo "</div>";
    }
 
    /**

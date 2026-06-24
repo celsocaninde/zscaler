@@ -128,6 +128,7 @@ function plugin_zscaler_install(): bool
             `resource` varchar(255) DEFAULT NULL,
             `result` varchar(100) DEFAULT NULL,
             `client_ip` varchar(64) DEFAULT NULL,
+            `tickets_id` int unsigned DEFAULT NULL,
             `recorded_at` timestamp NULL DEFAULT NULL,
             `raw_json` longtext DEFAULT NULL,
             `date_creation` timestamp NULL DEFAULT NULL,
@@ -135,6 +136,21 @@ function plugin_zscaler_install(): bool
             UNIQUE KEY `uniq_zscaler_audit_hash` (`entry_hash`),
             KEY `idx_admin` (`admin`),
             KEY `idx_recorded_at` (`recorded_at`)
+         ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}",
+      'glpi_plugin_zscaler_blockrequests' => "
+         CREATE TABLE `glpi_plugin_zscaler_blockrequests` (
+            `id` int unsigned NOT NULL AUTO_INCREMENT,
+            `urls` text NOT NULL,
+            `tickets_id` int unsigned DEFAULT NULL,
+            `status` varchar(30) NOT NULL DEFAULT 'pending_approval',
+            `requested_by` int unsigned DEFAULT NULL,
+            `approved_by` int unsigned DEFAULT NULL,
+            `message` text DEFAULT NULL,
+            `date_creation` timestamp NULL DEFAULT NULL,
+            `date_mod` timestamp NULL DEFAULT NULL,
+            PRIMARY KEY (`id`),
+            KEY `idx_tickets_id` (`tickets_id`),
+            KEY `idx_status` (`status`)
          ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}",
       'glpi_plugin_zscaler_cloudapps' => "
          CREATE TABLE `glpi_plugin_zscaler_cloudapps` (
@@ -161,6 +177,12 @@ function plugin_zscaler_install(): bool
       }
    }
 
+   // Migracoes incrementais para instalacoes ja existentes.
+   if ($DB->tableExists('glpi_plugin_zscaler_auditentries')
+      && !$DB->fieldExists('glpi_plugin_zscaler_auditentries', 'tickets_id')) {
+      $DB->doQuery("ALTER TABLE `glpi_plugin_zscaler_auditentries` ADD COLUMN `tickets_id` int unsigned DEFAULT NULL AFTER `client_ip`");
+   }
+
    ZscalerConfig::installDefaults();
    Profile::ensureProfileRights();
 
@@ -182,6 +204,7 @@ function plugin_zscaler_uninstall(): bool
    global $DB;
 
    $tables = [
+      'glpi_plugin_zscaler_blockrequests',
       'glpi_plugin_zscaler_cloudapps',
       'glpi_plugin_zscaler_auditentries',
       'glpi_plugin_zscaler_zdxalerts',

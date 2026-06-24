@@ -202,6 +202,64 @@ class TicketManager
       return self::htmlCard('Zscaler Shadow IT', self::value($appName), 'Aplicacao de nuvem de risco', $body, $accent);
    }
 
+   /**
+    * Cria um ticket para um registro sensivel do Admin Audit Log.
+    *
+    * @param array<string,mixed> $entry
+    */
+   public static function createForAuditEntry(array $entry, ?array $config = null): int
+   {
+      $config ??= Config::getConfig();
+      $ticket = new \Ticket();
+      $type = defined('Ticket::INCIDENT_TYPE') ? \Ticket::INCIDENT_TYPE : 1;
+
+      $admin = self::value($entry['admin'] ?? null);
+      $action = self::value($entry['action'] ?? null);
+
+      $input = [
+         'name'        => '[Zscaler Auditoria] ' . self::short($action, 50) . ' por ' . self::short($admin, 40),
+         'content'     => self::auditContent($entry),
+         'entities_id' => (int)($config['entity_id'] ?? 0),
+         'type'        => $type,
+         'urgency'     => self::scale($config['ticket_urgency'] ?? 4, 1, 5),
+         'impact'      => self::scale($config['ticket_impact'] ?? 4, 1, 5),
+         'priority'    => self::scale($config['ticket_priority'] ?? 4, 1, 6),
+      ];
+
+      $categoryId = (int)($config['ticket_category_id'] ?? 0);
+      if ($categoryId > 0) {
+         $input['itilcategories_id'] = $categoryId;
+      }
+
+      self::applyRequester($input, $config);
+
+      $ticketId = $ticket->add($input);
+      if (!$ticketId) {
+         throw new \RuntimeException('Nao foi possivel criar ticket GLPI para o registro de auditoria.');
+      }
+
+      return (int)$ticketId;
+   }
+
+   /**
+    * @param array<string,mixed> $entry
+    */
+   private static function auditContent(array $entry): string
+   {
+      $body = self::badge('Mudanca sensivel na console', '#c81e1e');
+      $body .= self::kvTable([
+         ['Administrador', $entry['admin'] ?? null],
+         ['Acao', $entry['action'] ?? null],
+         ['Recurso', $entry['resource'] ?? null],
+         ['Resultado', $entry['result'] ?? null],
+         ['IP de origem', $entry['client_ip'] ?? null],
+         ['Data do evento', $entry['recorded_at'] ?? null],
+      ]);
+      $body .= self::footerNote("\u{1F916} Ticket automatico do plugin Zscaler (Admin Audit Log).");
+
+      return self::htmlCard('Zscaler Auditoria', self::value($entry['action'] ?? null), self::value($entry['resource'] ?? null), $body, '#c81e1e');
+   }
+
    private static function zdxContent(array $alert): string
    {
       $severity = (string)($alert['severity'] ?? '');

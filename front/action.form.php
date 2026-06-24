@@ -1,6 +1,7 @@
 <?php
 
 use GlpiPlugin\Zscaler\Actions;
+use GlpiPlugin\Zscaler\BlockRequest;
 use GlpiPlugin\Zscaler\Profile;
 
 include('../../../inc/includes.php');
@@ -26,16 +27,24 @@ try {
       throw new \RuntimeException('Informe ao menos uma URL.');
    }
 
-   $result = $do === 'unblock'
-      ? Actions::unblockUrls($urls, $source)
-      : Actions::blockUrls($urls, $source);
+   if ($do === 'request_block') {
+      // Self-service: cria pedido + solicitacao de aprovacao (nao executa agora).
+      $ticketId = (int)($_POST['source_tickets_id'] ?? 0);
+      $approver = (int)($_POST['approver_id'] ?? 0);
+      $result = BlockRequest::create($urls, $ticketId, $approver);
+      \Session::addMessageAfterRedirect($result['message']);
+   } else {
+      $result = $do === 'unblock'
+         ? Actions::unblockUrls($urls, $source)
+         : Actions::blockUrls($urls, $source);
 
-   $msg = $result['message'];
-   if (!empty($result['ticket_id'])) {
-      $msg .= ' Ticket #' . (int)$result['ticket_id'] . '.';
+      $msg = $result['message'];
+      if (!empty($result['ticket_id'])) {
+         $msg .= ' Ticket #' . (int)$result['ticket_id'] . '.';
+      }
+
+      \Session::addMessageAfterRedirect($msg);
    }
-
-   \Session::addMessageAfterRedirect($msg);
 } catch (\Throwable $error) {
    \Session::addMessageAfterRedirect('Erro na acao Zscaler: ' . $error->getMessage(), false, ERROR);
 }

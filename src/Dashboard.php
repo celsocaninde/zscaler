@@ -22,6 +22,8 @@ class Dashboard
          'plugin_zscaler_actions_error'     => 'cardActionsError',
          'plugin_zscaler_zcc_unprotected'   => 'cardZccUnprotected',
          'plugin_zscaler_zdx_ongoing'       => 'cardZdxOngoing',
+         'plugin_zscaler_cloudapps_risky'   => 'cardCloudAppsRisky',
+         'plugin_zscaler_audit_total'       => 'cardAuditTotal',
       ];
 
       $labels = [
@@ -31,6 +33,8 @@ class Dashboard
          'plugin_zscaler_actions_error'     => 'Zscaler - Acoes com erro',
          'plugin_zscaler_zcc_unprotected'   => 'Zscaler - Computadores sem ZCC',
          'plugin_zscaler_zdx_ongoing'       => 'Zscaler - Alertas ZDX abertos',
+         'plugin_zscaler_cloudapps_risky'   => 'Zscaler - Apps de risco (Shadow IT)',
+         'plugin_zscaler_audit_total'       => 'Zscaler - Registros de auditoria',
       ];
 
       foreach ($defs as $key => $method) {
@@ -104,6 +108,28 @@ class Dashboard
          'Alertas ZDX abertos',
          'ti ti-activity-heartbeat',
          self::frontUrl('zdxalert.php')
+      );
+   }
+
+   public static function cardCloudAppsRisky(array $params = []): array
+   {
+      $value = Profile::hasReadRight() ? CloudApp::countRisky() : 0;
+
+      return [
+         'number' => $value,
+         'label'  => 'Apps de risco (Shadow IT)',
+         'icon'   => 'ti ti-cloud-data-connection',
+         'url'    => self::frontUrl('cloudapps.php'),
+      ];
+   }
+
+   public static function cardAuditTotal(array $params = []): array
+   {
+      return self::bigNumber(
+         self::count(AuditEntry::getTable()),
+         'Registros de auditoria',
+         'ti ti-clipboard-list',
+         self::frontUrl('auditlog_zia.php')
       );
    }
 

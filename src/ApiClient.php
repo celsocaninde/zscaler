@@ -250,6 +250,64 @@ class ApiClient
    }
 
    /**
+    * Busca um usuario do ZIA por nome/email (filtro server-side).
+    *
+    * @return array<string,mixed>|null
+    */
+   public function findUser(string $needle): ?array
+   {
+      $needle = trim($needle);
+      if ($needle === '') {
+         return null;
+      }
+
+      $list = $this->asList($this->request('GET', '/users', ['name' => $needle, 'pageSize' => 100]));
+      $lower = strtolower($needle);
+
+      foreach ($list as $user) {
+         if (!is_array($user)) {
+            continue;
+         }
+         $email = strtolower((string)($user['email'] ?? ''));
+         $login = strtolower((string)($user['loginName'] ?? $user['login'] ?? ''));
+         $name  = strtolower((string)($user['name'] ?? ''));
+         if ($lower === $email || $lower === $login || $lower === $name) {
+            return $user;
+         }
+      }
+
+      return $list[0] ?? null;
+   }
+
+   // ---------------------------------------------------------------------
+   // Traffic Forwarding (inventario: VPN, GRE, IPs estaticos)
+   // ---------------------------------------------------------------------
+
+   /**
+    * @return array<int, array<string, mixed>>
+    */
+   public function getVpnCredentials(): array
+   {
+      return $this->asList($this->request('GET', '/vpnCredentials', ['pageSize' => 1000]));
+   }
+
+   /**
+    * @return array<int, array<string, mixed>>
+    */
+   public function getGreTunnels(): array
+   {
+      return $this->asList($this->request('GET', '/greTunnels', ['pageSize' => 1000]));
+   }
+
+   /**
+    * @return array<int, array<string, mixed>>
+    */
+   public function getStaticIps(): array
+   {
+      return $this->asList($this->request('GET', '/staticIP', ['pageSize' => 1000]));
+   }
+
+   /**
     * Ativa as mudancas pendentes na console. Obrigatorio apos qualquer escrita.
     */
    public function activateChanges(): array

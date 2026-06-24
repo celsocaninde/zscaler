@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string)($_POST['do'] ?? '') === 's
    $days = (int)($_POST['days'] ?? 0);
    try {
       $result = Sync::syncAuditLog($days > 0 ? $days : null);
-      $flash = ['type' => 'ok', 'text' => $result['processed'] . ' registro(s) lido(s), ' . $result['inserted'] . ' novo(s) importado(s).'];
+      $flash = ['type' => 'ok', 'text' => $result['processed'] . ' registro(s) lido(s), ' . $result['inserted'] . ' novo(s) importado(s), ' . ($result['tickets'] ?? 0) . ' ticket(s) criado(s).'];
    } catch (\Throwable $error) {
       $flash = ['type' => 'error', 'text' => $error->getMessage()];
    }
@@ -72,12 +72,13 @@ echo "<div class='zscaler-panel__body'>";
 
 if ($entries !== []) {
    echo "<div class='table-responsive'><table class='table table-vcenter table-hover mb-0'>";
-   echo "<thead><tr><th>Data</th><th>Administrador</th><th>Acao</th><th>Recurso</th><th>Resultado</th><th>IP</th></tr></thead><tbody>";
+   echo "<thead><tr><th>Data</th><th>Administrador</th><th>Acao</th><th>Recurso</th><th>Resultado</th><th>IP</th><th>Ticket</th></tr></thead><tbody>";
    foreach ($entries as $row) {
       $result = strtolower((string)($row['result'] ?? ''));
       $badge = str_contains($result, 'fail') || str_contains($result, 'error') || str_contains($result, 'denied')
          ? 'zs-badge--error'
          : 'zs-badge--ok';
+      $ticketId = (int)($row['tickets_id'] ?? 0);
       echo "<tr>";
       echo "<td>" . $h((string)($row['recorded_at'] ?? '-')) . "</td>";
       echo "<td>" . $h((string)($row['admin'] ?? '-')) . "</td>";
@@ -85,6 +86,11 @@ if ($entries !== []) {
       echo "<td>" . $h((string)($row['resource'] ?? '-')) . "</td>";
       echo "<td><span class='zs-badge {$badge}'>" . $h((string)($row['result'] ?? '-')) . "</span></td>";
       echo "<td>" . $h((string)($row['client_ip'] ?? '-')) . "</td>";
+      if ($ticketId > 0) {
+         echo "<td><a href='" . $h($root . '/front/ticket.form.php?id=' . $ticketId) . "'>#" . $h((string)$ticketId) . "</a></td>";
+      } else {
+         echo "<td class='text-muted'>-</td>";
+      }
       echo "</tr>";
    }
    echo "</tbody></table></div>";

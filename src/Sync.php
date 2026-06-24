@@ -364,7 +364,7 @@ class Sync
    // ---------------------------------------------------------------------
 
    /**
-    * @return array{processed:int, inserted:int}
+    * @return array{processed:int, inserted:int, tickets:int}
     */
    public static function syncAuditLog(?int $daysBack = null): array
    {
@@ -381,8 +381,10 @@ class Sync
       $entries = $client->fetchAuditLog($days);
 
       $table = AuditEntry::getTable();
+      $hasTicketCol = $DB->fieldExists($table, 'tickets_id');
       $now = date('Y-m-d H:i:s');
       $inserted = 0;
+      $tickets = 0;
 
       foreach ($entries as $raw) {
          if (!is_array($raw) || $raw === []) {
@@ -403,23 +405,60 @@ class Sync
             continue;
          }
 
-         $DB->insert($table, [
-            'entry_hash'  => $hash,
+         $row = [
             'admin'       => self::nullable($admin),
             'action'      => self::nullable($action),
             'resource'    => self::nullable($resource),
             'result'      => self::nullable($result),
             'client_ip'   => self::nullable($clientIp),
             'recorded_at' => $recordedAt,
-            'raw_json'    => json_encode($raw, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+         ];
+
+         $ticketId = 0;
+         if ($hasTicketCol && self::isSensitiveAudit($action . ' ' . $resource, $config)) {
+            try {
+               $ticketId = TicketManager::createForAuditEntry($row, $config);
+               $tickets++;
+            } catch (\Throwable $error) {
+               Log::record('syncziaaudit', 'warning', 'Falha ao criar ticket de auditoria: ' . $error->getMessage());
+            }
+         }
+
+         $payload = $row + [
+            'entry_hash'    => $hash,
+            'raw_json'      => json_encode($raw, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
             'date_creation' => $now,
-         ]);
+         ];
+         if ($hasTicketCol && $ticketId > 0) {
+            $payload['tickets_id'] = $ticketId;
+         }
+
+         $DB->insert($table, $payload);
          $inserted++;
       }
 
       Log::record('syncziaaudit', 'ok', 'Auditoria ZIA sincronizada.', count($entries));
 
-      return ['processed' => count($entries), 'inserted' => $inserted];
+      return ['processed' => count($entries), 'inserted' => $inserted, 'tickets' => $tickets];
+   }
+
+   private static function isSensitiveAudit(string $haystack, array $config): bool
+   {
+      if ((string)($config['create_tickets'] ?? '0') !== '1'
+         || (string)($config['ticket_on_sensitive_audit'] ?? '0') !== '1') {
+         return false;
+      }
+
+      $haystack = strtolower($haystack);
+      $keywords = array_filter(array_map('trim', explode(',', strtolower((string)($config['audit_sensitive_keywords'] ?? '')))));
+
+      foreach ($keywords as $kw) {
+         if ($kw !== '' && str_contains($haystack, $kw)) {
+            return true;
+         }
+      }
+
+      return false;
    }
 
    // ---------------------------------------------------------------------

@@ -11,10 +11,11 @@ use GlpiPlugin\Zscaler\ItemAction;
 use GlpiPlugin\Zscaler\Menu as ZscalerMenu;
 use GlpiPlugin\Zscaler\Profile as ZscalerProfile;
 use GlpiPlugin\Zscaler\UrlCategory;
+use GlpiPlugin\Zscaler\UserPanel;
 use GlpiPlugin\Zscaler\ZccDevice;
 use GlpiPlugin\Zscaler\ZdxAlert;
 
-define('PLUGIN_ZSCALER_VERSION', '0.4.0');
+define('PLUGIN_ZSCALER_VERSION', '0.5.0');
 define('PLUGIN_ZSCALER_MIN_GLPI_VERSION', '11.0.0');
 define('PLUGIN_ZSCALER_MAX_GLPI_VERSION', '11.0.99');
 
@@ -50,9 +51,26 @@ function plugin_init_zscaler(): void
       'addtabon' => [\Ticket::class, \Computer::class],
    ]);
 
+   Plugin::registerClass(UserPanel::class, [
+      'addtabon' => [\User::class],
+   ]);
+
    $PLUGIN_HOOKS[Hooks::MENU_TOADD]['zscaler'] = [
       'plugins' => ZscalerMenu::class,
    ];
+
+   // Self-service: a aprovacao (TicketValidation) dispara o bloqueio aprovado.
+   $PLUGIN_HOOKS[Hooks::ITEM_UPDATE]['zscaler'] = [
+      'TicketValidation' => 'plugin_zscaler_validation_update',
+   ];
+   $PLUGIN_HOOKS[Hooks::ITEM_ADD]['zscaler'] = [
+      'TicketValidation' => 'plugin_zscaler_validation_update',
+   ];
+}
+
+function plugin_zscaler_validation_update($validation): void
+{
+   \GlpiPlugin\Zscaler\BlockRequest::onValidationUpdate($validation);
 }
 
 function plugin_version_zscaler(): array

@@ -73,6 +73,10 @@ class Config extends \CommonGLPI
          'risky_app_min_risk'          => 'high',
          // Admin Audit Log (ZIA)
          'audit_days'                  => '7',
+         'ticket_on_sensitive_audit'   => '0',
+         'audit_sensitive_keywords'    => 'delete,deactivate,disable,remove,credential,allowlist,denylist,security',
+         // Self-service (bloqueio com aprovacao)
+         'selfservice_enabled'         => '0',
          // Sandbox (ZIA)
          'sandbox_token'   => '',
          // ZCC - Client Connector
@@ -167,6 +171,12 @@ class Config extends \CommonGLPI
          ? (string)($input['risky_app_min_risk'] ?? 'high')
          : 'high';
       $config['audit_days'] = (string)max(1, min(180, (int)($input['audit_days'] ?? 7)));
+      $config['ticket_on_sensitive_audit'] = self::boolInput($input, 'ticket_on_sensitive_audit');
+      $config['audit_sensitive_keywords'] = self::cleanKeywords(
+         (string)($input['audit_sensitive_keywords'] ?? ''),
+         'delete,deactivate,disable,remove,credential,allowlist,denylist,security'
+      );
+      $config['selfservice_enabled'] = self::boolInput($input, 'selfservice_enabled');
 
       $config['zcc_enabled'] = self::boolInput($input, 'zcc_enabled');
       $config['zcc_api_base'] = rtrim(trim((string)($input['zcc_api_base'] ?? 'https://api-mobile.zscaler.net')), '/') ?: 'https://api-mobile.zscaler.net';
@@ -358,6 +368,9 @@ class Config extends \CommonGLPI
       self::renderYesNo('sync_users', 'Sincronizar usuarios', (string)$config['sync_users'] === '1', $canUpdate, 'Importa a lista de usuarios do ZIA (somente leitura).');
       self::renderYesNo('sync_locations', 'Sincronizar localidades', (string)$config['sync_locations'] === '1', $canUpdate, 'Importa a lista de localidades do ZIA (somente leitura).');
       self::renderNumber('audit_days', 'Auditoria: dias por importacao', (int)$config['audit_days'], 1, 180, $canUpdate, 'Janela de tempo do Admin Audit Log puxada a cada sincronizacao.');
+      self::renderYesNo('ticket_on_sensitive_audit', 'Ticket em mudanca sensivel (auditoria)', (string)$config['ticket_on_sensitive_audit'] === '1', $canUpdate, 'Abre ticket quando um novo registro de auditoria casa com as palavras-chave sensiveis (exige automacao de tickets ligada).');
+      self::renderText('audit_sensitive_keywords', 'Palavras-chave sensiveis (auditoria)', (string)$config['audit_sensitive_keywords'], 'delete,disable,credential...', $canUpdate, true, 'Comparadas com acao/recurso do registro de auditoria (sem distincao de maiusculas). Separe por virgula.');
+      self::renderYesNo('selfservice_enabled', 'Self-service: bloqueio com aprovacao', (string)$config['selfservice_enabled'] === '1', $canUpdate, 'Habilita, na aba Zscaler do Ticket, o pedido de bloqueio de URL que so executa apos aprovacao GLPI.');
       echo "</div>";
       echo "</section>";
 

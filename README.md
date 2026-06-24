@@ -6,7 +6,7 @@
 
 🚀 Repositório: https://github.com/celsocaninde/zscaler
 
-🏷️ Versão atual: `0.4.0` · GLPI `11.0.x` · PHP `>= 8.2`
+🏷️ Versão atual: `0.5.0` · GLPI `11.0.x` · PHP `>= 8.2`
 
 🎨 Identidade visual: azul Zscaler `#0648A8`, ciano `#00B2E3` e azul escuro `#0A1E3F`.
 
@@ -34,7 +34,11 @@ O **Zscaler GLPI Plugin** conecta a operação de segurança web ao inventário 
 - 🛡️ **Segurança ATP** com denylist de URLs maliciosas e allowlist (bypass) gerenciáveis com auditoria.
 - 🌩️ **Shadow IT / Cloud Apps** com descoberta de aplicações de nuvem e ticket automático para apps de risco.
 - 📋 **Admin Audit Log** importando "quem mudou o quê" na console ZIA para um painel no GLPI.
-- 🎫 **Tickets automáticos** para ações manuais, sandbox malicioso, alertas ZDX e apps de risco.
+- 🧭 **Traffic Forwarding** com inventário de credenciais VPN, túneis GRE e IPs estáticos (+ alerta de credenciais órfãs).
+- 🙋 **Self-service com aprovação** para pedir bloqueio de URL em um ticket; só executa após aprovação GLPI.
+- 🚨 **Ticket em mudança sensível** detectada na auditoria (palavras-chave configuráveis).
+- 👤 **Aba Zscaler no Usuário** casando o usuário GLPI com a identidade ZIA (departamento/grupos).
+- 🎫 **Tickets automáticos** para ações manuais, sandbox malicioso, alertas ZDX, apps de risco e auditoria sensível.
 - 🔐 **Permissões por perfil** para leitura, configuração e ações de escrita.
 - 🛡️ **Trava dupla de segurança** para qualquer ação que escreva na console Zscaler.
 - 🧾 **Logs de ação e sincronização** para auditoria operacional.
@@ -127,7 +131,8 @@ docker compose exec glpi-fpm php /var/www/glpi/bin/console plugin:activate zscal
 - 🔥 `/firewallFilteringRules`, `/firewallDnsRules`, `/firewallIpsRules` (GET + PUT estado)
 - 🌩️ `/cloudApplications/lite` (Shadow IT)
 - 📋 `/auditlogEntryReport` (+ `/download`) — Admin Audit Log
-- 👥 `/users`
+- 🧭 `/vpnCredentials`, `/greTunnels`, `/staticIP` (inventário de forwarding)
+- 👥 `/users` (+ filtro por nome/email para a aba do Usuário)
 - 📍 `/locations`
 - ⚡ `/status/activate`
 

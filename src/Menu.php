@@ -51,9 +51,13 @@ class Menu extends \CommonGLPI
       $menu['links']["<i class='ti ti-dashboard' title='Visao geral'></i>"] = $rootDoc . '/plugins/zscaler/front/overview.php';
       $menu['links']["<i class='ti ti-search' title='URL lookup / bloquear'></i>"] = $rootDoc . '/plugins/zscaler/front/urllookup.php';
       $menu['links']["<i class='ti ti-shield-cog' title='Politicas (URL Filtering)'></i>"] = $rootDoc . '/plugins/zscaler/front/policies.php';
+      $menu['links']["<i class='ti ti-flame' title='Cloud Firewall / DNS / IPS'></i>"] = $rootDoc . '/plugins/zscaler/front/firewall.php';
+      $menu['links']["<i class='ti ti-shield-lock' title='Seguranca (ATP / allowlist)'></i>"] = $rootDoc . '/plugins/zscaler/front/security.php';
+      $menu['links']["<i class='ti ti-cloud-data-connection' title='Shadow IT / Apps de nuvem'></i>"] = $rootDoc . '/plugins/zscaler/front/cloudapps.php';
       $menu['links']["<i class='ti ti-flask' title='Cloud Sandbox'></i>"] = $rootDoc . '/plugins/zscaler/front/sandbox.php';
       $menu['links']["<i class='ti ti-device-laptop' title='Dispositivos ZCC'></i>"] = $rootDoc . '/plugins/zscaler/front/zccdevice.php';
       $menu['links']["<i class='ti ti-activity-heartbeat' title='Alertas ZDX'></i>"] = $rootDoc . '/plugins/zscaler/front/zdxalert.php';
+      $menu['links']["<i class='ti ti-clipboard-list' title='Auditoria Zscaler'></i>"] = $rootDoc . '/plugins/zscaler/front/auditlog_zia.php';
       $menu['links']["<i class='ti ti-history' title='Historico de acoes'></i>"] = $rootDoc . '/plugins/zscaler/front/actionlog.php';
 
       return $menu;

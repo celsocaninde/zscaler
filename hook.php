@@ -119,6 +119,40 @@ function plugin_zscaler_install(): bool
             KEY `idx_status` (`status`),
             KEY `idx_tickets_id` (`tickets_id`)
          ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}",
+      'glpi_plugin_zscaler_auditentries' => "
+         CREATE TABLE `glpi_plugin_zscaler_auditentries` (
+            `id` int unsigned NOT NULL AUTO_INCREMENT,
+            `entry_hash` varchar(64) NOT NULL,
+            `admin` varchar(255) DEFAULT NULL,
+            `action` varchar(255) DEFAULT NULL,
+            `resource` varchar(255) DEFAULT NULL,
+            `result` varchar(100) DEFAULT NULL,
+            `client_ip` varchar(64) DEFAULT NULL,
+            `recorded_at` timestamp NULL DEFAULT NULL,
+            `raw_json` longtext DEFAULT NULL,
+            `date_creation` timestamp NULL DEFAULT NULL,
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `uniq_zscaler_audit_hash` (`entry_hash`),
+            KEY `idx_admin` (`admin`),
+            KEY `idx_recorded_at` (`recorded_at`)
+         ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}",
+      'glpi_plugin_zscaler_cloudapps' => "
+         CREATE TABLE `glpi_plugin_zscaler_cloudapps` (
+            `id` int unsigned NOT NULL AUTO_INCREMENT,
+            `app_id` varchar(255) NOT NULL,
+            `name` varchar(255) DEFAULT NULL,
+            `category` varchar(255) DEFAULT NULL,
+            `risk_index` varchar(50) DEFAULT NULL,
+            `sanctioned` varchar(50) DEFAULT NULL,
+            `tickets_id` int unsigned DEFAULT NULL,
+            `raw_json` longtext DEFAULT NULL,
+            `date_creation` timestamp NULL DEFAULT NULL,
+            `date_mod` timestamp NULL DEFAULT NULL,
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `uniq_zscaler_cloudapp` (`app_id`),
+            KEY `idx_risk_index` (`risk_index`),
+            KEY `idx_name` (`name`)
+         ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}",
    ];
 
    foreach ($tables as $table => $sql) {
@@ -130,7 +164,7 @@ function plugin_zscaler_install(): bool
    ZscalerConfig::installDefaults();
    Profile::ensureProfileRights();
 
-   foreach (['syncziadata', 'synczccdevices', 'synczdxalerts'] as $cron) {
+   foreach (['syncziadata', 'synczccdevices', 'synczdxalerts', 'syncziaaudit', 'synczcloudapps'] as $cron) {
       CronTask::register(Sync::class, $cron, HOUR_TIMESTAMP, [
          'mode'      => CronTask::MODE_EXTERNAL,
          'allowmode' => CronTask::MODE_EXTERNAL,
@@ -148,6 +182,8 @@ function plugin_zscaler_uninstall(): bool
    global $DB;
 
    $tables = [
+      'glpi_plugin_zscaler_cloudapps',
+      'glpi_plugin_zscaler_auditentries',
       'glpi_plugin_zscaler_zdxalerts',
       'glpi_plugin_zscaler_zccdevices',
       'glpi_plugin_zscaler_tokens',

@@ -21,6 +21,12 @@ class Sync
          'synczdxalerts' => [
             'description' => 'Sincroniza alertas do Zscaler Digital Experience e cria tickets opcionais',
          ],
+         'syncziaaudit' => [
+            'description' => 'Importa o Admin Audit Log do Zscaler (quem mudou o que na console)',
+         ],
+         'synczcloudapps' => [
+            'description' => 'Sincroniza apps de nuvem (Shadow IT) e abre tickets para apps de risco',
+         ],
       ];
 
       return $info[strtolower($name)] ?? [];
@@ -66,6 +72,34 @@ class Sync
          return 1;
       } catch (\Throwable $error) {
          Log::record('synczdxalerts', 'error', $error->getMessage());
+         return 0;
+      }
+   }
+
+   public static function cronSyncziaaudit(?\CronTask $task = null): int
+   {
+      try {
+         $result = self::syncAuditLog();
+         if ($task !== null) {
+            $task->addVolume($result['inserted']);
+         }
+         return 1;
+      } catch (\Throwable $error) {
+         Log::record('syncziaaudit', 'error', $error->getMessage());
+         return 0;
+      }
+   }
+
+   public static function cronSynczcloudapps(?\CronTask $task = null): int
+   {
+      try {
+         $result = self::syncCloudApps();
+         if ($task !== null) {
+            $task->addVolume($result['processed']);
+         }
+         return 1;
+      } catch (\Throwable $error) {
+         Log::record('synczcloudapps', 'error', $error->getMessage());
          return 0;
       }
    }
@@ -325,6 +359,193 @@ class Sync
       return true;
    }
 
+   // ---------------------------------------------------------------------
+   // Admin Audit Log (relatorio assincrono CSV)
+   // ---------------------------------------------------------------------
+
+   /**
+    * @return array{processed:int, inserted:int}
+    */
+   public static function syncAuditLog(?int $daysBack = null): array
+   {
+      global $DB;
+
+      $config = Config::getConfig();
+      if (!Config::isConfigured($config)) {
+         Log::record('syncziaaudit', 'skipped', 'Integracao Zscaler nao configurada.');
+         return ['processed' => 0, 'inserted' => 0];
+      }
+
+      $days = $daysBack ?? max(1, min(180, (int)($config['audit_days'] ?? 7)));
+      $client = ApiClient::fromConfig($config);
+      $entries = $client->fetchAuditLog($days);
+
+      $table = AuditEntry::getTable();
+      $now = date('Y-m-d H:i:s');
+      $inserted = 0;
+
+      foreach ($entries as $raw) {
+         if (!is_array($raw) || $raw === []) {
+            continue;
+         }
+
+         $admin    = self::csvPick($raw, ['admin login id', 'admin', 'login id', 'user']);
+         $action   = self::csvPick($raw, ['action', 'operation']);
+         $resource = self::csvPick($raw, ['resource', 'category', 'subcategory', 'object', 'resource type']);
+         $result   = self::csvPick($raw, ['result', 'status', 'response']);
+         $clientIp = self::csvPick($raw, ['client ip', 'source ip', 'admin ip', 'ip']);
+         $when     = self::csvPick($raw, ['recorded time', 'time', 'timestamp', 'date']);
+         $recordedAt = self::epochOrDate($when) ?? $now;
+
+         $hash = hash('sha256', $recordedAt . '|' . $admin . '|' . $action . '|' . $resource . '|' . $clientIp);
+
+         if (self::findId($table, 'entry_hash', $hash) !== null) {
+            continue;
+         }
+
+         $DB->insert($table, [
+            'entry_hash'  => $hash,
+            'admin'       => self::nullable($admin),
+            'action'      => self::nullable($action),
+            'resource'    => self::nullable($resource),
+            'result'      => self::nullable($result),
+            'client_ip'   => self::nullable($clientIp),
+            'recorded_at' => $recordedAt,
+            'raw_json'    => json_encode($raw, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+            'date_creation' => $now,
+         ]);
+         $inserted++;
+      }
+
+      Log::record('syncziaaudit', 'ok', 'Auditoria ZIA sincronizada.', count($entries));
+
+      return ['processed' => count($entries), 'inserted' => $inserted];
+   }
+
+   // ---------------------------------------------------------------------
+   // Shadow IT / Cloud Applications
+   // ---------------------------------------------------------------------
+
+   /**
+    * @return array{processed:int, tickets:int}
+    */
+   public static function syncCloudApps(): array
+   {
+      global $DB;
+
+      $config = Config::getConfig();
+      if (!Config::isConfigured($config)) {
+         Log::record('synczcloudapps', 'skipped', 'Integracao Zscaler nao configurada.');
+         return ['processed' => 0, 'tickets' => 0];
+      }
+
+      $client = ApiClient::fromConfig($config);
+      $apps = $client->getCloudApplications();
+      $table = CloudApp::getTable();
+      $now = date('Y-m-d H:i:s');
+      $tickets = 0;
+
+      foreach ($apps as $raw) {
+         if (!is_array($raw)) {
+            continue;
+         }
+
+         $appId = (string)self::pick($raw, ['id', 'appId', 'app_id', 'val']);
+         $name  = (string)self::pick($raw, ['name', 'appName', 'app', 'application']);
+         if ($appId === '' && $name === '') {
+            continue;
+         }
+         if ($appId === '') {
+            $appId = 'name:' . $name;
+         }
+
+         $risk = self::nullable(self::pick($raw, ['riskIndex', 'risk', 'riskLevel', 'risk_index']));
+         $data = [
+            'name'       => self::nullable($name),
+            'category'   => self::nullable(self::pick($raw, ['category', 'appCategory', 'parentCategory'])),
+            'risk_index' => $risk,
+            'sanctioned' => self::nullable(self::pick($raw, ['sanctioned', 'sanctionedState', 'status'])),
+            'raw_json'   => json_encode($raw, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+            'date_mod'   => $now,
+         ];
+
+         $existing = self::getRowByField($table, 'app_id', $appId);
+         if ($existing !== null) {
+            if (!empty($existing['tickets_id'])) {
+               $data['tickets_id'] = (int)$existing['tickets_id'];
+            }
+            $DB->update($table, $data, ['id' => (int)$existing['id']]);
+            continue;
+         }
+
+         if (self::shouldTicketApp($risk, $config)) {
+            try {
+               $data['tickets_id'] = TicketManager::createForCloudApp($name, $raw, $config);
+               $tickets++;
+            } catch (\Throwable $error) {
+               Log::record('synczcloudapps', 'warning', 'Falha ao criar ticket de app de risco: ' . $error->getMessage());
+            }
+         }
+
+         $DB->insert($table, $data + ['app_id' => $appId, 'date_creation' => $now]);
+      }
+
+      Log::record('synczcloudapps', 'ok', 'Apps de nuvem (Shadow IT) sincronizados.', count($apps));
+
+      return ['processed' => count($apps), 'tickets' => $tickets];
+   }
+
+   private static function shouldTicketApp(?string $risk, array $config): bool
+   {
+      if ((string)($config['create_tickets'] ?? '0') !== '1'
+         || (string)($config['ticket_on_risky_app'] ?? '0') !== '1') {
+         return false;
+      }
+
+      $risk = strtolower(trim((string)$risk));
+      if ($risk === '') {
+         return false;
+      }
+
+      $min = strtolower((string)($config['risky_app_min_risk'] ?? 'high'));
+      if ($min === 'medium') {
+         return in_array($risk, ['medium', 'media', 'moderate', 'high', 'alto', 'critical', 'critica'], true);
+      }
+
+      return in_array($risk, ['high', 'alto', 'critical', 'critica'], true);
+   }
+
+   /**
+    * Acesso a coluna do CSV de auditoria por nome aproximado (case-insensitive).
+    *
+    * @param array<string,string> $row
+    * @param string[]             $names
+    */
+   private static function csvPick(array $row, array $names): string
+   {
+      $lower = [];
+      foreach ($row as $key => $value) {
+         $lower[strtolower(trim((string)$key))] = (string)$value;
+      }
+      foreach ($names as $name) {
+         $name = strtolower($name);
+         if (isset($lower[$name]) && trim($lower[$name]) !== '') {
+            return trim($lower[$name]);
+         }
+      }
+      // Match por substring (cabecalhos variam entre tenants).
+      foreach ($names as $name) {
+         $name = strtolower($name);
+         foreach ($lower as $key => $value) {
+            if (trim($value) !== '' && str_contains($key, $name)) {
+               return trim($value);
+            }
+         }
+      }
+
+      return '';
+   }
+
    private static function matchComputer(string $hostname): ?int
    {
       $hostname = trim($hostname);
@@ -431,6 +652,9 @@ class Sync
          'zcc_unprotected'   => ZccDevice::countUnprotectedComputers(),
          'zdx_total'         => self::countRows(ZdxAlert::getTable()),
          'zdx_ongoing'       => self::countRows(ZdxAlert::getTable(), ['status' => 'ongoing']),
+         'audit_total'       => self::countRows(AuditEntry::getTable()),
+         'cloudapps_total'   => self::countRows(CloudApp::getTable()),
+         'cloudapps_risky'   => CloudApp::countRisky(),
          'last_sync'         => self::getLastLog('syncziadata'),
          'recent_actions'    => ActionLog::getRecent(8),
          'recent_categories' => self::getRows(UrlCategory::getTable(), ['type' => 'custom'], ['date_mod DESC'], 8),

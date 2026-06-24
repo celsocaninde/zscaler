@@ -258,6 +258,233 @@ class ApiClient
    }
 
    // ---------------------------------------------------------------------
+   // Cloud Firewall / DNS / IPS (toggle de regras)
+   // ---------------------------------------------------------------------
+
+   /**
+    * @return array<int, array<string, mixed>>
+    */
+   public function getFirewallDnsRules(): array
+   {
+      return $this->asList($this->request('GET', '/firewallDnsRules'));
+   }
+
+   /**
+    * @return array<int, array<string, mixed>>
+    */
+   public function getFirewallIpsRules(): array
+   {
+      return $this->asList($this->request('GET', '/firewallIpsRules'));
+   }
+
+   /**
+    * Liga/desliga uma regra de firewall (filtering | dns | ips).
+    */
+   public function setFirewallRuleState(string $type, int $id, bool $enabled): array
+   {
+      $path = self::firewallPath($type) . '/' . $id;
+
+      $rule = $this->request('GET', $path);
+      unset($rule['_http_status']);
+      $rule['state'] = $enabled ? 'ENABLED' : 'DISABLED';
+
+      return $this->request('PUT', $path, [], $rule);
+   }
+
+   private static function firewallPath(string $type): string
+   {
+      return match (strtolower($type)) {
+         'dns'   => '/firewallDnsRules',
+         'ips'   => '/firewallIpsRules',
+         default => '/firewallFilteringRules',
+      };
+   }
+
+   // ---------------------------------------------------------------------
+   // Security Policy Settings - allowlist (URLs que ignoram a politica)
+   // ---------------------------------------------------------------------
+
+   /**
+    * @return string[] URLs na allowlist da politica de seguranca.
+    */
+   public function getSecurityAllowlist(): array
+   {
+      $response = $this->request('GET', '/security');
+      $urls = $response['whitelistUrls'] ?? [];
+
+      return is_array($urls) ? array_values(array_map('strval', $urls)) : [];
+   }
+
+   /**
+    * Substitui a allowlist completa (o endpoint /security exige o objeto inteiro).
+    *
+    * @param string[] $urls
+    */
+   public function setSecurityAllowlist(array $urls): array
+   {
+      $current = $this->request('GET', '/security');
+      unset($current['_http_status']);
+      $current['whitelistUrls'] = array_values($urls);
+
+      return $this->request('PUT', '/security', [], $current);
+   }
+
+   /**
+    * @param string[] $urls
+    */
+   public function addToAllowlist(array $urls): array
+   {
+      $merged = array_values(array_unique(array_merge($this->getSecurityAllowlist(), $urls)));
+
+      return $this->setSecurityAllowlist($merged);
+   }
+
+   /**
+    * @param string[] $urls
+    */
+   public function removeFromAllowlist(array $urls): array
+   {
+      $remove = array_map('strtolower', $urls);
+      $kept = array_filter(
+         $this->getSecurityAllowlist(),
+         static fn(string $u): bool => !in_array(strtolower($u), $remove, true)
+      );
+
+      return $this->setSecurityAllowlist(array_values($kept));
+   }
+
+   // ---------------------------------------------------------------------
+   // Shadow IT / Cloud Applications
+   // ---------------------------------------------------------------------
+
+   /**
+    * Catalogo de aplicacoes descobertas/conhecidas pelo Cloud App Control.
+    *
+    * @return array<int, array<string, mixed>>
+    */
+   public function getCloudApplications(): array
+   {
+      return $this->asList($this->request('GET', '/cloudApplications/lite'));
+   }
+
+   // ---------------------------------------------------------------------
+   // Admin Audit Log (relatorio assincrono CSV)
+   // ---------------------------------------------------------------------
+
+   public function requestAuditLogReport(int $startTimeMs, int $endTimeMs): array
+   {
+      return $this->request('POST', '/auditlogEntryReport', [], [
+         'startTime' => $startTimeMs,
+         'endTime'   => $endTimeMs,
+      ]);
+   }
+
+   public function getAuditLogReportStatus(): array
+   {
+      return $this->request('GET', '/auditlogEntryReport');
+   }
+
+   public function downloadAuditLogReport(): string
+   {
+      return $this->requestRaw('GET', '/auditlogEntryReport/download');
+   }
+
+   public function cancelAuditLogReport(): void
+   {
+      try {
+         $this->request('DELETE', '/auditlogEntryReport');
+      } catch (\Throwable $error) {
+         // Sem relatorio pendente: ignorar.
+      }
+   }
+
+   /**
+    * Fluxo completo do relatorio de auditoria: solicita, aguarda gerar, baixa e
+    * parseia o CSV em linhas associativas.
+    *
+    * @return array<int, array<string, string>>
+    */
+   public function fetchAuditLog(int $daysBack = 7, int $maxWaitSeconds = 15): array
+   {
+      $endMs   = (int)round(microtime(true) * 1000);
+      $startMs = $endMs - (max(1, $daysBack) * 86400 * 1000);
+
+      $this->cancelAuditLogReport();
+      $this->requestAuditLogReport($startMs, $endMs);
+
+      $deadline = time() + max(3, min(60, $maxWaitSeconds));
+      $ready = false;
+
+      do {
+         $status = $this->getAuditLogReportStatus();
+         $state = strtoupper((string)($status['status'] ?? ''));
+         if ($state === 'COMPLETE') {
+            $ready = true;
+            break;
+         }
+         if ($state === 'ERRORED') {
+            throw new \RuntimeException('A geracao do relatorio de auditoria falhou na console Zscaler.');
+         }
+         usleep(1500000); // 1.5s
+      } while (time() < $deadline);
+
+      if (!$ready) {
+         throw new \RuntimeException('Relatorio de auditoria ainda em geracao. Tente novamente em instantes.');
+      }
+
+      $csv = $this->downloadAuditLogReport();
+      $this->cancelAuditLogReport();
+
+      return self::parseAuditCsv($csv);
+   }
+
+   /**
+    * @return array<int, array<string, string>>
+    */
+   private static function parseAuditCsv(string $csv): array
+   {
+      $csv = trim($csv);
+      if ($csv === '') {
+         return [];
+      }
+
+      $lines = preg_split('/\r\n|\r|\n/', $csv) ?: [];
+
+      // O CSV do ZIA tem um preambulo antes do cabecalho real.
+      $headerIdx = -1;
+      foreach ($lines as $i => $line) {
+         $low = strtolower($line);
+         if (str_contains($low, 'time') && (str_contains($low, 'action') || str_contains($low, 'admin'))) {
+            $headerIdx = $i;
+            break;
+         }
+      }
+      if ($headerIdx < 0) {
+         return [];
+      }
+
+      $headers = array_map('trim', str_getcsv($lines[$headerIdx]));
+      $rows = [];
+      $count = count($lines);
+      for ($i = $headerIdx + 1; $i < $count; $i++) {
+         if (trim($lines[$i]) === '') {
+            continue;
+         }
+         $cols = str_getcsv($lines[$i]);
+         if (count($cols) < 2) {
+            continue;
+         }
+         $row = [];
+         foreach ($headers as $h => $name) {
+            $row[(string)$name] = isset($cols[$h]) ? trim((string)$cols[$h]) : '';
+         }
+         $rows[] = $row;
+      }
+
+      return $rows;
+   }
+
+   // ---------------------------------------------------------------------
    // Nucleo HTTP / autenticacao
    // ---------------------------------------------------------------------
 
@@ -281,6 +508,30 @@ class ApiClient
       }
 
       return $this->decode($result['body'], $result['status']);
+   }
+
+   /**
+    * Como request(), mas devolve o corpo bruto (ex.: download CSV de auditoria).
+    */
+   public function requestRaw(string $method, string $path, array $query = [], ?array $body = null): string
+   {
+      $this->ensureAuthenticated();
+
+      $result = $this->send($method, $path, $query, $body);
+
+      if ($result['status'] === 401) {
+         $this->clearCachedCredential();
+         $this->sessionCredential = null;
+         $this->ensureAuthenticated();
+         $result = $this->send($method, $path, $query, $body);
+      }
+
+      if ($result['status'] >= 400) {
+         // Reaproveita o tratamento de erro (lanca excecao com a msg da API).
+         $this->decode($result['body'], $result['status']);
+      }
+
+      return (string)$result['body'];
    }
 
    private function modifyDenylist(array $urls, string $action): array

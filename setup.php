@@ -2,6 +2,8 @@
 
 use Glpi\Plugin\Hooks;
 use GlpiPlugin\Zscaler\ActionLog;
+use GlpiPlugin\Zscaler\AuditEntry;
+use GlpiPlugin\Zscaler\CloudApp;
 use GlpiPlugin\Zscaler\Config as ZscalerConfig;
 use GlpiPlugin\Zscaler\Dashboard as ZscalerDashboard;
 use GlpiPlugin\Zscaler\DenylistEntry;
@@ -12,7 +14,7 @@ use GlpiPlugin\Zscaler\UrlCategory;
 use GlpiPlugin\Zscaler\ZccDevice;
 use GlpiPlugin\Zscaler\ZdxAlert;
 
-define('PLUGIN_ZSCALER_VERSION', '0.3.1');
+define('PLUGIN_ZSCALER_VERSION', '0.4.0');
 define('PLUGIN_ZSCALER_MIN_GLPI_VERSION', '11.0.0');
 define('PLUGIN_ZSCALER_MAX_GLPI_VERSION', '11.0.99');
 
@@ -40,6 +42,8 @@ function plugin_init_zscaler(): void
    Plugin::registerClass(ActionLog::class);
    Plugin::registerClass(ZccDevice::class);
    Plugin::registerClass(ZdxAlert::class);
+   Plugin::registerClass(AuditEntry::class);
+   Plugin::registerClass(CloudApp::class);
    Plugin::registerClass(ZscalerMenu::class);
 
    Plugin::registerClass(ItemAction::class, [

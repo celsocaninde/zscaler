@@ -195,6 +195,128 @@ class Actions
       return ['ok' => true, 'message' => $message];
    }
 
+   /**
+    * Liga/desliga uma regra de Cloud Firewall, DNS ou IPS.
+    *
+    * @param string $type 'filtering' | 'dns' | 'ips'
+    * @return array{ok:bool, message:string}
+    */
+   public static function setFirewallRuleState(string $type, int $ruleId, bool $enabled, string $ruleName = ''): array
+   {
+      $config = self::guard();
+      if ($ruleId <= 0) {
+         throw new \RuntimeException('Regra invalida.');
+      }
+
+      $type = in_array(strtolower($type), ['dns', 'ips', 'filtering'], true) ? strtolower($type) : 'filtering';
+      $typeLabel = ['dns' => 'DNS', 'ips' => 'IPS', 'filtering' => 'Firewall'][$type];
+      $client = ApiClient::fromConfig($config);
+      $label = $ruleName !== '' ? $ruleName : ('#' . $ruleId);
+      $state = $enabled ? 'ENABLED' : 'DISABLED';
+
+      try {
+         $client->setFirewallRuleState($type, $ruleId, $enabled);
+         self::maybeActivate($client, $config);
+      } catch (\Throwable $error) {
+         ActionLog::record([
+            'action'   => 'firewall_state',
+            'target'   => $typeLabel . ' ' . $label . ' -> ' . $state,
+            'status'   => 'error',
+            'message'  => $error->getMessage(),
+            'users_id' => self::currentUserId(),
+         ]);
+         Log::record('firewall_state', 'error', $error->getMessage());
+         throw $error;
+      }
+
+      $message = 'Regra ' . $typeLabel . ' "' . $label . '" ' . ($enabled ? 'ativada' : 'desativada') . ' na console Zscaler.';
+      ActionLog::record([
+         'action'   => 'firewall_state',
+         'target'   => $typeLabel . ' ' . $label . ' -> ' . $state,
+         'status'   => 'ok',
+         'message'  => $message,
+         'users_id' => self::currentUserId(),
+      ]);
+      Log::record('firewall_state', 'ok', $message);
+
+      return ['ok' => true, 'message' => $message];
+   }
+
+   /**
+    * Adiciona URLs a allowlist (bypass) da politica de seguranca.
+    *
+    * @param string[] $urls
+    * @return array{ok:bool, count:int, ticket_id:int, message:string}
+    */
+   public static function allowlistUrls(array $urls, array $source = []): array
+   {
+      return self::allowlistOperation('add', $urls, $source);
+   }
+
+   /**
+    * Remove URLs da allowlist (bypass) da politica de seguranca.
+    *
+    * @param string[] $urls
+    * @return array{ok:bool, count:int, ticket_id:int, message:string}
+    */
+   public static function removeAllowlistUrls(array $urls, array $source = []): array
+   {
+      return self::allowlistOperation('remove', $urls, $source);
+   }
+
+   /**
+    * @param string[] $urls
+    * @return array{ok:bool, count:int, ticket_id:int, message:string}
+    */
+   private static function allowlistOperation(string $op, array $urls, array $source): array
+   {
+      $config = self::guard();
+
+      $urls = self::normalizeUrls($urls);
+      if ($urls === []) {
+         throw new \RuntimeException('Informe ao menos uma URL valida.');
+      }
+
+      $client = ApiClient::fromConfig($config);
+      $action = $op === 'remove' ? 'allowlist_remove' : 'allowlist_add';
+      $target = self::summarizeTarget($urls);
+
+      try {
+         if ($op === 'remove') {
+            $client->removeFromAllowlist($urls);
+         } else {
+            $client->addToAllowlist($urls);
+         }
+         self::maybeActivate($client, $config);
+      } catch (\Throwable $error) {
+         ActionLog::record([
+            'action'   => $action,
+            'target'   => $target,
+            'status'   => 'error',
+            'message'  => $error->getMessage(),
+            'users_id' => self::currentUserId(),
+         ]);
+         Log::record($action, 'error', $error->getMessage());
+         throw $error;
+      }
+
+      $verb = $op === 'remove' ? 'removida(s) da' : 'adicionada(s) a';
+      $message = count($urls) . ' URL(s) ' . $verb . ' allowlist de seguranca na console Zscaler.';
+      $ticketId = self::handleTicket($action, $urls, $config, $source, $message);
+
+      ActionLog::record([
+         'action'     => $action,
+         'target'     => $target,
+         'status'     => 'ok',
+         'message'    => $message,
+         'users_id'   => self::currentUserId(),
+         'tickets_id' => $ticketId ?: ($source['tickets_id'] ?? null),
+      ]);
+      Log::record($action, 'ok', $message, count($urls));
+
+      return ['ok' => true, 'count' => count($urls), 'ticket_id' => $ticketId, 'message' => $message];
+   }
+
    private static function guard(): array
    {
       $config = Config::getConfig();

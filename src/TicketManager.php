@@ -144,6 +144,64 @@ class TicketManager
       return (int)$ticketId;
    }
 
+   /**
+    * Cria um ticket para uma aplicacao de nuvem de risco (Shadow IT).
+    *
+    * @param array<string,mixed> $raw
+    */
+   public static function createForCloudApp(string $appName, array $raw, ?array $config = null): int
+   {
+      $config ??= Config::getConfig();
+      $ticket = new \Ticket();
+      $type = defined('Ticket::INCIDENT_TYPE') ? \Ticket::INCIDENT_TYPE : 1;
+
+      $input = [
+         'name'        => '[Zscaler Shadow IT] App de risco detectado: ' . self::short($appName, 60),
+         'content'     => self::cloudAppContent($appName, $raw),
+         'entities_id' => (int)($config['entity_id'] ?? 0),
+         'type'        => $type,
+         'urgency'     => self::scale($config['ticket_urgency'] ?? 4, 1, 5),
+         'impact'      => self::scale($config['ticket_impact'] ?? 4, 1, 5),
+         'priority'    => self::scale($config['ticket_priority'] ?? 4, 1, 6),
+      ];
+
+      $categoryId = (int)($config['ticket_category_id'] ?? 0);
+      if ($categoryId > 0) {
+         $input['itilcategories_id'] = $categoryId;
+      }
+
+      self::applyRequester($input, $config);
+
+      $ticketId = $ticket->add($input);
+      if (!$ticketId) {
+         throw new \RuntimeException('Nao foi possivel criar ticket GLPI para a aplicacao de nuvem.');
+      }
+
+      return (int)$ticketId;
+   }
+
+   /**
+    * @param array<string,mixed> $raw
+    */
+   private static function cloudAppContent(string $appName, array $raw): string
+   {
+      $risk = self::value($raw['riskIndex'] ?? $raw['risk'] ?? $raw['riskLevel'] ?? null);
+      $accent = self::severityColor($risk);
+
+      $body = self::badge('Shadow IT', self::ZS_CYAN);
+      $body .= self::badge('Risco: ' . $risk, $accent);
+      $body .= self::kvTable([
+         ['Aplicacao', $appName],
+         ['Categoria', $raw['category'] ?? $raw['appCategory'] ?? null],
+         ['Indice de risco', $risk],
+         ['Sancionada', $raw['sanctioned'] ?? $raw['sanctionedState'] ?? null],
+         ['Data', date('Y-m-d H:i:s')],
+      ]);
+      $body .= self::footerNote("\u{1F916} Ticket automatico do plugin Zscaler (Shadow IT / Cloud App Control).");
+
+      return self::htmlCard('Zscaler Shadow IT', self::value($appName), 'Aplicacao de nuvem de risco', $body, $accent);
+   }
+
    private static function zdxContent(array $alert): string
    {
       $severity = (string)($alert['severity'] ?? '');

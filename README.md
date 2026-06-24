@@ -6,7 +6,7 @@
 
 🚀 Repositório: https://github.com/celsocaninde/zscaler
 
-🏷️ Versão atual: `0.2.0` · GLPI `11.0.x` · PHP `>= 8.2`
+🏷️ Versão atual: `0.4.0` · GLPI `11.0.x` · PHP `>= 8.2`
 
 🎨 Identidade visual: azul Zscaler `#0648A8`, ciano `#00B2E3` e azul escuro `#0A1E3F`.
 
@@ -30,7 +30,11 @@ O **Zscaler GLPI Plugin** conecta a operação de segurança web ao inventário 
 - 🧪 **Cloud Sandbox** com consulta por hash MD5, submissão de arquivos e ticket automático em veredicto malicioso.
 - 💻 **ZCC Client Connector** com inventário de dispositivos e relatório de computadores GLPI sem Zscaler.
 - 📈 **ZDX Digital Experience** com sincronização de alertas abertos e abertura de tickets por severidade.
-- 🎫 **Tickets automáticos** para ações manuais, sandbox malicioso e alertas ZDX.
+- 🔥 **Cloud Firewall / DNS / IPS** com listagem e liga/desliga de regras (mesma trava dupla das ações).
+- 🛡️ **Segurança ATP** com denylist de URLs maliciosas e allowlist (bypass) gerenciáveis com auditoria.
+- 🌩️ **Shadow IT / Cloud Apps** com descoberta de aplicações de nuvem e ticket automático para apps de risco.
+- 📋 **Admin Audit Log** importando "quem mudou o quê" na console ZIA para um painel no GLPI.
+- 🎫 **Tickets automáticos** para ações manuais, sandbox malicioso, alertas ZDX e apps de risco.
 - 🔐 **Permissões por perfil** para leitura, configuração e ações de escrita.
 - 🛡️ **Trava dupla de segurança** para qualquer ação que escreva na console Zscaler.
 - 🧾 **Logs de ação e sincronização** para auditoria operacional.
@@ -116,9 +120,13 @@ docker compose exec glpi-fpm php /var/www/glpi/bin/console plugin:activate zscal
 
 - 📚 `/urlCategories`
 - 🔎 `/urlLookup`
-- 🚫 `/security/advanced` + `/blacklistUrls`
+- 🚫 `/security/advanced` + `/blacklistUrls` (denylist ATP)
+- 🛡️ `/security` + `whitelistUrls` (allowlist / bypass)
 - 🧩 `/urlCategories/{id}` com `ADD_TO_LIST`
 - 🧪 `/sandbox/report/{md5}`
+- 🔥 `/firewallFilteringRules`, `/firewallDnsRules`, `/firewallIpsRules` (GET + PUT estado)
+- 🌩️ `/cloudApplications/lite` (Shadow IT)
+- 📋 `/auditlogEntryReport` (+ `/download`) — Admin Audit Log
 - 👥 `/users`
 - 📍 `/locations`
 - ⚡ `/status/activate`
@@ -170,7 +178,11 @@ The **Zscaler GLPI Plugin** brings web security operations into GLPI by connecti
 - 🧪 **Cloud Sandbox** hash lookup, file submission, and automatic tickets for malicious verdicts.
 - 💻 **ZCC Client Connector** device inventory and GLPI computers without Zscaler coverage.
 - 📈 **ZDX Digital Experience** ongoing alert sync and severity-based ticket creation.
-- 🎫 **Automatic tickets** for manual actions, malicious sandbox results, and ZDX alerts.
+- 🔥 **Cloud Firewall / DNS / IPS** rule listing and enable/disable (same double safety lock).
+- 🛡️ **ATP security** with manageable malicious-URL denylist and allowlist (bypass), all audited.
+- 🌩️ **Shadow IT / Cloud Apps** discovery with automatic tickets for risky applications.
+- 📋 **Admin Audit Log** importing "who changed what" from the ZIA console into a GLPI panel.
+- 🎫 **Automatic tickets** for manual actions, malicious sandbox results, ZDX alerts, and risky apps.
 - 🔐 **Profile permissions** for read, configuration, and write actions.
 - 🛡️ **Double safety lock** before any write operation reaches the Zscaler console.
 - 🧾 **Action and sync logs** for operational auditing.
@@ -256,9 +268,13 @@ docker compose exec glpi-fpm php /var/www/glpi/bin/console plugin:activate zscal
 
 - 📚 `/urlCategories`
 - 🔎 `/urlLookup`
-- 🚫 `/security/advanced` + `/blacklistUrls`
+- 🚫 `/security/advanced` + `/blacklistUrls` (ATP denylist)
+- 🛡️ `/security` + `whitelistUrls` (allowlist / bypass)
 - 🧩 `/urlCategories/{id}` with `ADD_TO_LIST`
 - 🧪 `/sandbox/report/{md5}`
+- 🔥 `/firewallFilteringRules`, `/firewallDnsRules`, `/firewallIpsRules` (GET + PUT state)
+- 🌩️ `/cloudApplications/lite` (Shadow IT)
+- 📋 `/auditlogEntryReport` (+ `/download`) — Admin Audit Log
 - 👥 `/users`
 - 📍 `/locations`
 - ⚡ `/status/activate`

@@ -69,6 +69,10 @@ class Config extends \CommonGLPI
          'ticket_on_action'            => '1',
          'ticket_on_sandbox_malicious' => '0',
          'ticket_on_zdx_alert'         => '0',
+         'ticket_on_risky_app'         => '0',
+         'risky_app_min_risk'          => 'high',
+         // Admin Audit Log (ZIA)
+         'audit_days'                  => '7',
          // Sandbox (ZIA)
          'sandbox_token'   => '',
          // ZCC - Client Connector
@@ -158,6 +162,11 @@ class Config extends \CommonGLPI
       $config['ticket_on_action'] = self::boolInput($input, 'ticket_on_action');
       $config['ticket_on_sandbox_malicious'] = self::boolInput($input, 'ticket_on_sandbox_malicious');
       $config['ticket_on_zdx_alert'] = self::boolInput($input, 'ticket_on_zdx_alert');
+      $config['ticket_on_risky_app'] = self::boolInput($input, 'ticket_on_risky_app');
+      $config['risky_app_min_risk'] = in_array((string)($input['risky_app_min_risk'] ?? 'high'), ['medium', 'high'], true)
+         ? (string)($input['risky_app_min_risk'] ?? 'high')
+         : 'high';
+      $config['audit_days'] = (string)max(1, min(180, (int)($input['audit_days'] ?? 7)));
 
       $config['zcc_enabled'] = self::boolInput($input, 'zcc_enabled');
       $config['zcc_api_base'] = rtrim(trim((string)($input['zcc_api_base'] ?? 'https://api-mobile.zscaler.net')), '/') ?: 'https://api-mobile.zscaler.net';
@@ -348,6 +357,7 @@ class Config extends \CommonGLPI
       self::renderEntityDropdown('entity_id', 'Entidade padrao GLPI', (int)$config['entity_id'], $canUpdate);
       self::renderYesNo('sync_users', 'Sincronizar usuarios', (string)$config['sync_users'] === '1', $canUpdate, 'Importa a lista de usuarios do ZIA (somente leitura).');
       self::renderYesNo('sync_locations', 'Sincronizar localidades', (string)$config['sync_locations'] === '1', $canUpdate, 'Importa a lista de localidades do ZIA (somente leitura).');
+      self::renderNumber('audit_days', 'Auditoria: dias por importacao', (int)$config['audit_days'], 1, 180, $canUpdate, 'Janela de tempo do Admin Audit Log puxada a cada sincronizacao.');
       echo "</div>";
       echo "</section>";
 
@@ -364,6 +374,11 @@ class Config extends \CommonGLPI
       self::renderSelectFromArray('ticket_impact', 'Impacto', self::ticketScaleOptions(false), (int)$config['ticket_impact'], $canUpdate);
       self::renderSelectFromArray('ticket_priority', 'Prioridade', self::ticketScaleOptions(true), (int)$config['ticket_priority'], $canUpdate);
       self::renderYesNo('ticket_on_zdx_alert', 'Ticket em alerta ZDX', (string)$config['ticket_on_zdx_alert'] === '1', $canUpdate, 'Abre ticket quando um alerta do ZDX e sincronizado (respeita a severidade minima do ZDX).');
+      self::renderYesNo('ticket_on_risky_app', 'Ticket em app de risco (Shadow IT)', (string)$config['ticket_on_risky_app'] === '1', $canUpdate, 'Abre ticket quando um novo app de nuvem de risco e descoberto na sincronizacao.');
+      self::renderSelectFromArray('risky_app_min_risk', 'Risco minimo p/ ticket de app', [
+         'medium' => 'Medio ou maior',
+         'high'   => 'Alto ou critico',
+      ], (string)$config['risky_app_min_risk'], $canUpdate, 'Define quais apps de nuvem viram ticket (quando o ticket de app de risco esta ligado).');
       echo "</div>";
       echo "</section>";
 

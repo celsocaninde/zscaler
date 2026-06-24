@@ -2,6 +2,7 @@
 
 use GlpiPlugin\Zscaler\Menu;
 use GlpiPlugin\Zscaler\Profile;
+use GlpiPlugin\Zscaler\Scope;
 use GlpiPlugin\Zscaler\ZccDevice;
 
 include('../../../inc/includes.php');
@@ -25,20 +26,29 @@ if ($DB->tableExists(ZccDevice::getTable())) {
    }
 }
 
+// Workstations apenas: VMs (por Tipo/Modelo) ficam fora do escopo do Zscaler.
+$virtualTypeIds  = Scope::virtualTypeIds();
+$virtualModelIds = Scope::virtualModelIds();
+
 $rows = [];
 foreach ($DB->request([
-   'SELECT' => ['id', 'name', 'serial', 'entities_id'],
+   'SELECT' => ['id', 'name', 'serial', 'entities_id', 'computertypes_id', 'computermodels_id'],
    'FROM'   => 'glpi_computers',
    'WHERE'  => ['is_deleted' => 0],
    'ORDER'  => ['name ASC'],
    'LIMIT'  => 500,
 ]) as $row) {
-   if (!isset($matched[(int)$row['id']])) {
-      $rows[] = $row;
+   if (isset($matched[(int)$row['id']])) {
+      continue;
    }
+   if (Scope::isVirtualRow($row, $virtualTypeIds, $virtualModelIds)) {
+      continue;
+   }
+   $rows[] = $row;
 }
 
 \Html::header('Computadores sem ZCC', $_SERVER['PHP_SELF'], 'plugins', 'zscaler');
+echo "<style>.container-xl,.container-lg{max-width:100%!important}</style>";
 
 echo "<div class='zscaler-dashboard'>";
 echo "<div class='zscaler-dashboard__hero'>";
@@ -47,7 +57,7 @@ echo "<span class='zs-logo'><span class='ti ti-shield-off'></span></span>";
 echo "<div>";
 echo "<div class='zscaler-dashboard__eyebrow'>Zscaler &middot; Client Connector</div>";
 echo "<h2>Computadores sem o Zscaler</h2>";
-echo "<p>Ativos do GLPI sem um dispositivo do Client Connector vinculado.</p>";
+echo "<p>Workstations do GLPI sem um dispositivo do Client Connector vinculado (VMs excluidas).</p>";
 echo "</div>";
 echo "</div>";
 echo "<div class='zscaler-hero__actions'>";

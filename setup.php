@@ -12,7 +12,7 @@ use GlpiPlugin\Zscaler\UrlCategory;
 use GlpiPlugin\Zscaler\ZccDevice;
 use GlpiPlugin\Zscaler\ZdxAlert;
 
-define('PLUGIN_ZSCALER_VERSION', '0.2.0');
+define('PLUGIN_ZSCALER_VERSION', '0.3.1');
 define('PLUGIN_ZSCALER_MIN_GLPI_VERSION', '11.0.0');
 define('PLUGIN_ZSCALER_MAX_GLPI_VERSION', '11.0.99');
 

@@ -77,6 +77,9 @@ class Config extends \CommonGLPI
          'zcc_api_key'     => '',
          'zcc_secret_key'  => '',
          'zcc_sync_pages'  => '10',
+         // Escopo (o Client Connector roda so em workstations; VMs ficam fora)
+         'vm_type_keywords'  => Scope::DEFAULT_TYPE_KEYWORDS,
+         'vm_model_keywords' => Scope::DEFAULT_MODEL_KEYWORDS,
          // ZDX - Digital Experience
          'zdx_enabled'        => '0',
          'zdx_api_base'       => 'https://api.zdxcloud.net',
@@ -161,6 +164,9 @@ class Config extends \CommonGLPI
       $config['zcc_api_key'] = trim((string)($input['zcc_api_key'] ?? ''));
       $config['zcc_sync_pages'] = (string)max(1, min(200, (int)($input['zcc_sync_pages'] ?? 10)));
 
+      $config['vm_type_keywords'] = self::cleanKeywords((string)($input['vm_type_keywords'] ?? ''), Scope::DEFAULT_TYPE_KEYWORDS);
+      $config['vm_model_keywords'] = self::cleanKeywords((string)($input['vm_model_keywords'] ?? ''), Scope::DEFAULT_MODEL_KEYWORDS);
+
       $config['zdx_enabled'] = self::boolInput($input, 'zdx_enabled');
       $config['zdx_api_base'] = rtrim(trim((string)($input['zdx_api_base'] ?? 'https://api.zdxcloud.net')), '/') ?: 'https://api.zdxcloud.net';
       $config['zdx_key_id'] = trim((string)($input['zdx_key_id'] ?? ''));
@@ -189,6 +195,15 @@ class Config extends \CommonGLPI
 
       // Troca de credenciais invalida o cache de sessao/token.
       self::flushTokenCache();
+   }
+
+   /** Normaliza uma lista de palavras-chave separadas por virgula (cai no default se vazia). */
+   private static function cleanKeywords(string $raw, string $fallback): string
+   {
+      $parts = array_map('trim', explode(',', $raw));
+      $parts = array_values(array_filter($parts, static fn(string $s): bool => $s !== ''));
+
+      return $parts === [] ? $fallback : implode(',', $parts);
    }
 
    public static function isConfigured(?array $config = null): bool
@@ -370,6 +385,16 @@ class Config extends \CommonGLPI
       self::renderText('zcc_api_key', 'API Key (Client ID)', (string)$config['zcc_api_key'], '', $canUpdate, false, 'Gerada em Mobile Admin Portal &rarr; Administration &rarr; API.');
       self::renderPassword('zcc_secret_key', 'Secret Key', trim((string)$config['zcc_secret_key']) !== '' ? 'Secret cadastrado' : 'Secret nao cadastrado', $canUpdate);
       self::renderNumber('zcc_sync_pages', 'Maximo de paginas por sync', (int)$config['zcc_sync_pages'], 1, 200, $canUpdate, 'Limite de paginas de dispositivos por execucao.');
+      echo "</div>";
+      echo "</section>";
+
+      // ----- Escopo (workstations) -----
+      echo "<section class='zscaler-panel'>";
+      self::panelHead('Escopo (workstations)', 'O Client Connector roda so em workstations. VMs ficam fora.', 'ti-device-desktop');
+      echo "<div class='zscaler-panel__body zscaler-fields'>";
+      echo "<div class='zscaler-field zscaler-field--wide'><small>Uma maquina e tratada como <strong>VM (fora de escopo)</strong> se o nome do <strong>Tipo</strong> OU do <strong>Modelo</strong> do computador contiver uma das palavras-chave abaixo (sem distincao de maiusculas). VMs nao entram na lista de \"sem ZCC\" e aparecem como fora de escopo na aba do Computador.</small></div>";
+      self::renderText('vm_type_keywords', 'Palavras-chave de Tipo (VM)', (string)$config['vm_type_keywords'], Scope::DEFAULT_TYPE_KEYWORDS, $canUpdate, true, 'Comparadas com o nome do Tipo de computador. Separe por virgula.');
+      self::renderText('vm_model_keywords', 'Palavras-chave de Modelo (VM)', (string)$config['vm_model_keywords'], Scope::DEFAULT_MODEL_KEYWORDS, $canUpdate, true, 'Comparadas com o nome do Modelo (preenchido pelo inventario: VMware, VirtualBox, KVM...). Separe por virgula.');
       echo "</div>";
       echo "</section>";
 

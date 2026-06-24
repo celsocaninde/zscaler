@@ -72,5 +72,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 \Html::header('Zscaler', $_SERVER['PHP_SELF'], 'config', 'plugins');
+echo "<style>.container-xl,.container-lg{max-width:100%!important}</style>";
 Config::showForm();
 \Html::footer();

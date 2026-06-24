@@ -37,15 +37,23 @@ class ZccDevice extends \CommonDBTM
          $matched[(int)$row['computers_id']] = true;
       }
 
+      // Workstations apenas: VMs (por Tipo/Modelo) ficam fora do escopo do Zscaler.
+      $virtualTypeIds  = Scope::virtualTypeIds();
+      $virtualModelIds = Scope::virtualModelIds();
+
       $total = 0;
       foreach ($DB->request([
-         'SELECT' => ['id'],
+         'SELECT' => ['id', 'computertypes_id', 'computermodels_id'],
          'FROM'   => 'glpi_computers',
          'WHERE'  => ['is_deleted' => 0],
       ]) as $row) {
-         if (!isset($matched[(int)$row['id']])) {
-            $total++;
+         if (isset($matched[(int)$row['id']])) {
+            continue;
          }
+         if (Scope::isVirtualRow($row, $virtualTypeIds, $virtualModelIds)) {
+            continue;
+         }
+         $total++;
       }
 
       return $total;

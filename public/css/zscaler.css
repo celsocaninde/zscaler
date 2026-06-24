@@ -21,8 +21,7 @@
 /* ---------- Wrappers ---------- */
 .zscaler-config,
 .zscaler-dashboard {
-   max-width: 1280px;
-   margin: 0 auto;
+   width: 100%;
 }
 
 /* ---------- Marca / logo ---------- */
@@ -401,6 +400,50 @@
 .zs-badge--error {
    background: #fdecec;
    color: #9b1c1c;
+}
+
+.zs-badge--warn {
+   background: #fff4e2;
+   color: #9a5b00;
+}
+
+/* ---------- Postura ZCC (aba do Computador) ---------- */
+.zscaler-posture {
+   margin-top: 1rem;
+   padding: 1rem;
+   border: 1px solid var(--zs-border);
+   border-radius: 14px;
+   background: linear-gradient(180deg, rgba(0, 178, 227, .05), transparent 60%);
+}
+
+.zscaler-posture__head {
+   display: flex;
+   align-items: center;
+   gap: .5rem;
+   margin-bottom: .75rem;
+}
+
+.zscaler-posture__head .ti {
+   display: inline-flex;
+   width: 1.9rem;
+   height: 1.9rem;
+   align-items: center;
+   justify-content: center;
+   border-radius: 9px;
+   color: #fff;
+   background: var(--zs-grad-btn);
+}
+
+.zscaler-posture__head h4 {
+   margin: 0;
+   font-size: .98rem;
+   font-weight: 700;
+   color: var(--zs-dark);
+}
+
+.zscaler-posture .table th {
+   color: var(--zs-muted);
+   font-weight: 600;
 }
 
 .zscaler-break {

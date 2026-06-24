@@ -79,6 +79,7 @@ if ($configured) {
 }
 
 \Html::header('Zscaler - Sandbox', $_SERVER['PHP_SELF'], 'plugins', 'zscaler');
+echo "<style>.container-xl,.container-lg{max-width:100%!important}</style>";
 
 echo "<div class='zscaler-dashboard'>";
 echo "<div class='zscaler-dashboard__hero'>";

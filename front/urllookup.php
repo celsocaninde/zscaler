@@ -73,6 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 \Html::header('Zscaler - URL lookup', $_SERVER['PHP_SELF'], 'plugins', 'zscaler');
+echo "<style>.container-xl,.container-lg{max-width:100%!important}</style>";
 
 echo "<div class='zscaler-dashboard'>";
 

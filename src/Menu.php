@@ -14,6 +14,11 @@ class Menu extends \CommonGLPI
       return 'Zscaler';
    }
 
+   public static function canView(): bool
+   {
+      return Profile::hasReadRight();
+   }
+
    public static function getIcon(): string
    {
       return 'ti ti-cloud-lock';
@@ -29,6 +34,10 @@ class Menu extends \CommonGLPI
     */
    public static function getMenuContent()
    {
+      if (!self::canView()) {
+         return [];
+      }
+
       $rootDoc = self::rootDoc();
 
       $menu = [

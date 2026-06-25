@@ -203,10 +203,15 @@ class Profile extends \Profile
       return \Session::haveRight(self::RIGHT_CONFIG, UPDATE);
    }
 
+   public static function getIcon(): string
+   {
+      return 'ti ti-cloud-lock';
+   }
+
    public function getTabNameForItem(\CommonGLPI $item, $withtemplate = 0): string
    {
       if ($item instanceof \Profile) {
-         return 'Zscaler';
+         return self::createTabEntry('Zscaler', 0, null, self::getIcon());
       }
 
       return '';
